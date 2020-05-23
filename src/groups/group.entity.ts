@@ -1,14 +1,16 @@
-import { BaseEntity, Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
-import { User } from '../users/user.entity';
+import { BaseEntity, Column, Entity, ObjectIdColumn, PrimaryColumn } from 'typeorm';
 
 @Entity()
 export class Group extends BaseEntity {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @ObjectIdColumn()
+  _id: string;
+
+  @PrimaryColumn()
+  id: string;
 
   @Column()
   title: string;
 
   @Column()
-  users: User[];
+  users: string[];
 }

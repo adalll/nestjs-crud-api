@@ -1,9 +1,8 @@
-
 import { UsersService } from './users.service';
 import { User } from './user.entity';
-import { GetUsersFilterDto } from './dto/get-users-filter.dto';
-import { CreateUserDto } from './dto/create-user-dto';
-import { Body, Controller, Get, Post, Query, UsePipes, ValidationPipe } from '@nestjs/common';
+import { CreateUserDto } from './dto/create-user.dto';
+import { Body, Controller, Delete, Get, Param, Patch, Post, UsePipes, ValidationPipe } from '@nestjs/common';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Controller('users')
 export class UsersController {
@@ -11,14 +10,14 @@ export class UsersController {
   }
 
   @Get()
-  getUsers(@Query(ValidationPipe) filterDto: GetUsersFilterDto): Promise<User[]> {
-    return this.usersService.getUsers(filterDto);
+  getUsers(): Promise<User[]> {
+    return this.usersService.getUsers();
   }
-  //
-  // @Get('/:id')
-  // getTaskById(@Param('id', ParseIntPipe) id: number): Promise<Task> {
-  //   return this.taskService.getTaskById(id);
-  // }
+
+  @Get('/:id')
+  getUser(@Param('id') id: string): Promise<User> {
+    return this.usersService.getUser(id);
+  }
 
   @Post()
   @UsePipes(ValidationPipe)
@@ -26,17 +25,18 @@ export class UsersController {
     return this.usersService.createUser(createUserDto);
   }
 
-  // @Patch('/:id/status')
-  // updateTaskStatus(
-  //   @Param('id', ParseIntPipe) id: number,
-  //   @Body('status', TaskStatusValidationPipe) status: TaskStatus,
-  // ): Promise<Task> {
-  //   return this.taskService.updateTaskStatus(id, status);
-  // }
-  //
-  // @Delete('/:id')
-  // deleteTask(@Param('id', ParseIntPipe) id: number): Promise<void> {
-  //   return this.taskService.deleteTask(id);
-  // }
+  @Patch('/:id')
+  @UsePipes(ValidationPipe)
+  updateUser(
+    @Param('id') id: string,
+    @Body() updateUserDto: UpdateUserDto,
+  ): Promise<User> {
+    return this.usersService.updateUser(id, updateUserDto);
+  }
+
+  @Delete('/:id')
+  deleteUser(@Param('id') id: string): Promise<void> {
+    return this.usersService.deleteUser(id);
+  }
 
 }
