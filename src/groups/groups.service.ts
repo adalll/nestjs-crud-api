@@ -6,6 +6,7 @@ import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
 import { Group } from './group.entity';
 import { UsersService } from '../users/users.service';
+import { User } from '../users/user.entity';
 
 @Injectable()
 export class GroupsService {
@@ -57,34 +58,36 @@ export class GroupsService {
   async updateGroup(id: string, updateGroupDto: UpdateGroupDto): Promise<Group> {
 
     const { title, users } = updateGroupDto;
-    const group = await this.getGroup(id);
+
+    const groupCopy = await this.copyGroup(id);
+
     if (title) {
-      group.title = title;
+      groupCopy.title = title;
     }
     // If replace list of users in group
     if (users) {
       // Add group to users from new list
       for (const user of users) {
         // Check if we have new user not in old users list
-        if (group.users.indexOf(user) === -1) {
+        if (groupCopy.users.indexOf(user) === -1) {
           // Check if user exist
           const found = await this.usersService.getUser(user);
           if (found) {
-            await this.usersService.addGroupToUser(user, group.id);
+            await this.usersService.addGroupToUser(user, groupCopy.id);
           }
         }
       }
       // Remove group from users from old list
-      for (const user of group.users) {
+      for (const user of groupCopy.users) {
         // Check if group from old list not in new list
         if (users.indexOf(user) === -1) {
-          await this.usersService.deleteGroupFromUser(user, group.id);
+          await this.usersService.deleteGroupFromUser(user, groupCopy.id);
         }
       }
-      group.users = users;
+      groupCopy.users = users;
     }
-    await group.save();
-    return group;
+    await groupCopy.save();
+    return groupCopy;
   }
 
   async deleteGroup(id: string): Promise<void> {
@@ -97,14 +100,20 @@ export class GroupsService {
   }
 
   async addUserToGroup(userId: string, groupId: string): Promise<void> {
-    const group = await this.getGroup(groupId);
-    group.users.push(userId);
-    await group.save();
+    const groupCopy = await this.copyGroup(groupId);
+    groupCopy.users.push(userId);
+    await groupCopy.save();
   }
 
   async deleteUserFromGroup(userId: string, groupId: string): Promise<void> {
+    const groupCopy = await this.copyGroup(groupId);
+    groupCopy.users = groupCopy.users.filter(user => user !== userId);
+    await groupCopy.save();
+  }
+
+  async copyGroup(groupId): Promise<Group> {
     const group = await this.getGroup(groupId);
-    group.users = group.users.filter(user => user !== userId);
-    await group.save();
+    const groupCopy = new Group();
+    return Object.assign(groupCopy, group);
   }
 }

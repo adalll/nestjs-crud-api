@@ -71,34 +71,35 @@ export class UsersService {
   async updateUser(id: string, updateUserDto: UpdateUserDto): Promise<User> {
 
     const { firstName, lastName, groups, friends } = updateUserDto;
-    const user = await this.getUser(id);
+    const userCopy = await this.copyUser(id);
+
     if (firstName) {
-      user.firstName = firstName;
+      userCopy.firstName = firstName;
     }
     if (lastName) {
-      user.lastName = lastName;
+      userCopy.lastName = lastName;
     }
     // If replace list of groups in user
     if (groups) {
       // Add user to added groups
       for (const group of groups) {
         // Check if we have new group not in old groups list
-        if (user.groups.indexOf(group) === -1) {
+        if (userCopy.groups.indexOf(group) === -1) {
           // Check if group exist
           const found = await this.groupsService.getGroup(group);
           if (found) {
-            await this.groupsService.addUserToGroup(user.id, group);
+            await this.groupsService.addUserToGroup(userCopy.id, group);
           }
         }
       }
       // Remove user from removed groups
-      for (const group of user.groups) {
+      for (const group of userCopy.groups) {
         // Check if group from old list not in new list
         if (groups.indexOf(group) === -1) {
-          await this.groupsService.deleteUserFromGroup(user.id, group);
+          await this.groupsService.deleteUserFromGroup(userCopy.id, group);
         }
       }
-      user.groups = groups;
+      userCopy.groups = groups;
     }
 
     // If replace list of friends in user
@@ -107,24 +108,24 @@ export class UsersService {
       // Add user to friends from new list
       for (const friend of friends) {
         // Check if we have new friend not in old friends list
-        if (user.friends.indexOf(friend) === -1) {
+        if (userCopy.friends.indexOf(friend) === -1) {
           // Check if user exist
           const found = await this.getUser(friend);
           if (found) {
-            await this.addUserToFriends(user.id, friend);
+            await this.addUserToFriends(userCopy.id, friend);
           }
         }
       }
       // Remove user from removed friends
-      for (const friend of user.friends) {
+      for (const friend of userCopy.friends) {
         if (friends.indexOf(friend) === -1) {
-          await this.deleteUserFromFriends(user.id, friend);
+          await this.deleteUserFromFriends(userCopy.id, friend);
         }
       }
-      user.friends = friends;
+      userCopy.friends = friends;
     }
-    await user.save();
-    return user;
+    await userCopy.save();
+    return userCopy;
   }
 
   async deleteUser(id: string): Promise<void> {
@@ -142,27 +143,33 @@ export class UsersService {
 
 
   async addGroupToUser(userId: string, groupId: string): Promise<void> {
-    const user = await this.getUser(userId);
-    user.groups.push(groupId);
-    await user.save();
+    const userCopy = await this.copyUser(userId);
+    userCopy.groups.push(groupId);
+    await userCopy.save();
   }
 
   async deleteGroupFromUser(userId: string, groupId: string): Promise<void> {
-    const user = await this.getUser(userId);
-    user.groups = user.groups.filter(group => group !== groupId);
-    await user.save();
+    const userCopy = await this.copyUser(userId);
+    userCopy.groups = userCopy.groups.filter(group => group !== groupId);
+    await userCopy.save();
   }
 
   async addUserToFriends(userId: string, recieverUserId: string): Promise<void> {
-    const user = await this.getUser(recieverUserId);
-    user.friends.push(userId);
-    await user.save();
+    const userCopy = await this.copyUser(recieverUserId);
+    userCopy.friends.push(userId);
+    await userCopy.save();
   }
 
   async deleteUserFromFriends(userId: string, recieverUserId: string): Promise<void> {
-    const user = await this.getUser(recieverUserId);
-    user.friends = user.friends.filter(friend => friend !== userId);
-    await user.save();
+    const userCopy = await this.copyUser(recieverUserId);
+    userCopy.friends = userCopy.friends.filter(friend => friend !== userId);
+    await userCopy.save();
+  }
+
+  async copyUser(userId): Promise<User> {
+    const user = await this.getUser(userId);
+    const userCopy = new User();
+    return Object.assign(userCopy, user);
   }
 
 }
