@@ -6,7 +6,6 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './user.entity';
 import { GroupsService } from '../groups/groups.service';
-import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class UsersService {
@@ -15,12 +14,10 @@ export class UsersService {
     @InjectRepository(User) private userRepository: Repository<User>,
     @Inject(forwardRef(() => GroupsService))
     private groupsService: GroupsService,
-    private configService: ConfigService
   ) {
   }
 
   async getUsers(): Promise<User[]> {
-    console.log(this.configService.get('PORT'));
     return await this.userRepository.find();
   }
 
