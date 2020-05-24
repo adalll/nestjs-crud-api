@@ -1,14 +1,30 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { typeOrmConfig } from './config/typeorm.config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { UsersModule } from './users/users.module';
 import { GroupsModule } from './groups/groups.module';
+import { User } from './users/user.entity';
+import { Group } from './groups/group.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forRoot(typeOrmConfig),
+    ConfigModule.forRoot({
+      isGlobal: true,
+    }),
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      useFactory: async (configService: ConfigService) => ({
+        type: configService.get('DATABASE_TYPE'),
+        url: configService.get('DATABASE_URL'),
+        synchronize: true,
+        useUnifiedTopology: true,
+        entities: [User, Group],
+      }),
+      inject: [ConfigService],
+    }),
     UsersModule,
-    GroupsModule
+    GroupsModule,
   ],
 })
-export class AppModule {}
+export class AppModule {
+}
