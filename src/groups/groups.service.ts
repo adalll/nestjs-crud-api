@@ -6,7 +6,6 @@ import { CreateGroupDto } from './dto/create-group.dto';
 import { UpdateGroupDto } from './dto/update-group.dto';
 import { Group } from './group.entity';
 import { UsersService } from '../users/users.service';
-import { User } from '../users/user.entity';
 
 @Injectable()
 export class GroupsService {
