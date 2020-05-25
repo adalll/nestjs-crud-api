@@ -111,9 +111,7 @@ export class GroupsService {
   }
 
   async copyGroup(groupId): Promise<Group> {
-    const group = await this.getGroup(groupId);
-    const groupCopy = new Group();
-    return Object.assign(groupCopy, group);
+    return Object.assign(await this.getGroup(groupId));
   }
 
   async getManyGroups(groupsIds: string[]): Promise<Group[]> {
