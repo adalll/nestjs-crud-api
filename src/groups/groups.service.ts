@@ -115,4 +115,14 @@ export class GroupsService {
     const groupCopy = new Group();
     return Object.assign(groupCopy, group);
   }
+
+  async getManyGroups(groupsIds: string[]): Promise<Group[]> {
+    return this.groupRepository.find({
+      where: {
+        id: {
+          $in: groupsIds,
+        },
+      },
+    });
+  }
 }

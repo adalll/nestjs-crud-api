@@ -5,6 +5,7 @@ import { UsersModule } from './users/users.module';
 import { GroupsModule } from './groups/groups.module';
 import { User } from './users/user.entity';
 import { Group } from './groups/group.entity';
+import { GraphQLModule } from '@nestjs/graphql';
 
 @Module({
   imports: [
@@ -21,6 +22,9 @@ import { Group } from './groups/group.entity';
         entities: [User, Group],
       }),
       inject: [ConfigService],
+    }),
+    GraphQLModule.forRoot({
+      autoSchemaFile: true,
     }),
     UsersModule,
     GroupsModule,

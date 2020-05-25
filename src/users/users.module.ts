@@ -5,6 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from './user.entity';
 import { GroupsModule } from '../groups/groups.module';
 import { GroupsService } from '../groups/groups.service';
+import { UserResolver } from './user.resolver';
 
 @Module({
   imports: [
@@ -12,7 +13,7 @@ import { GroupsService } from '../groups/groups.service';
     forwardRef(() => GroupsModule)
   ],
   controllers: [UsersController],
-  providers: [UsersService, GroupsService],
+  providers: [UsersService, GroupsService, UserResolver],
   exports: [
     UsersService,
     TypeOrmModule.forFeature([User])

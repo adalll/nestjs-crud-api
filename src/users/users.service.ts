@@ -6,6 +6,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './user.entity';
 import { GroupsService } from '../groups/groups.service';
+import { Group } from '../groups/group.entity';
 
 @Injectable()
 export class UsersService {
@@ -170,6 +171,16 @@ export class UsersService {
     const user = await this.getUser(userId);
     const userCopy = new User();
     return Object.assign(userCopy, user);
+  }
+
+  async getManyUsers(usersIds: string[]): Promise<User[]> {
+    return this.userRepository.find({
+      where: {
+        id: {
+          $in: usersIds,
+        },
+      },
+    });
   }
 
 }
