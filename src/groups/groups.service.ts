@@ -38,8 +38,10 @@ export class GroupsService {
     group.users = [];
 
     if (users) {
+      // Filter duplicates
+      const uniqUsers = users.filter((item, idx, arr) => arr.indexOf(item) === idx);
       // Add group to users from list
-      for (const user of users) {
+      for (const user of uniqUsers) {
         // Check if user exist
         if (await this.usersService.getUser(user)) {
           // Add group to users from list

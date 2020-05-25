@@ -38,7 +38,8 @@ export class UsersService {
     user.groups = [];
     user.friends = [];
     if (groups) {
-      for (const group of groups) {
+      const uniqGroups = groups.filter((item, idx, arr) => arr.indexOf(item) === idx);
+      for (const group of uniqGroups) {
         //Check if group exist
         if (await this.groupsService.getGroup(group)) {
           // Add user to groups from list
@@ -49,7 +50,8 @@ export class UsersService {
       }
     }
     if (friends) {
-      for (const friend of friends) {
+      const uniqFriends = friends.filter((item, idx, arr) => arr.indexOf(item) === idx);
+      for (const friend of uniqFriends) {
         //Check if user exist
         if (await this.getUser(friend)) {
           // Add user to friends from list
