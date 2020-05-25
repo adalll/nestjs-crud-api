@@ -21,9 +21,9 @@ export class UsersService {
     return await this.userRepository.find();
   }
 
-  async getUser(id: string): Promise<User> {
+  async getUser(id: string, throwError?: boolean): Promise<User> {
     const user = await this.userRepository.findOne({ id });
-    if (!user) {
+    if (!user && throwError) {
       throw new NotFoundException(`User with id ${id} not found!`);
     }
     return user;
@@ -36,12 +36,11 @@ export class UsersService {
     user.firstName = firstName;
     user.lastName = lastName;
     user.groups = [];
-
+    user.friends = [];
     if (groups) {
       for (const group of groups) {
         //Check if group exist
-        const found = await this.groupsService.getGroup(group);
-        if (found) {
+        if (await this.groupsService.getGroup(group)) {
           // Add user to groups from list
           await this.groupsService.addUserToGroup(user.id, group);
           // Add group to user's groups
@@ -49,14 +48,10 @@ export class UsersService {
         }
       }
     }
-
-    user.friends = [];
-
     if (friends) {
       for (const friend of friends) {
         //Check if user exist
-        const found = await this.getUser(friend);
-        if (found) {
+        if (await this.getUser(friend)) {
           // Add user to friends from list
           await this.addUserToFriends(user.id, friend);
           // Add friend to friends list
@@ -71,7 +66,7 @@ export class UsersService {
   async updateUser(id: string, updateUserDto: UpdateUserDto): Promise<User> {
 
     const { firstName, lastName, groups, friends } = updateUserDto;
-    const userCopy = await this.copyUser(id);
+    const userCopy = Object.assign(await this.getUser(id, true));
 
     if (firstName) {
       userCopy.firstName = firstName;
@@ -81,55 +76,63 @@ export class UsersService {
     }
     // If replace list of groups in user
     if (groups) {
-      // Add user to added groups
+
       for (const group of groups) {
         // Check if we have new group not in old groups list
         if (userCopy.groups.indexOf(group) === -1) {
           // Check if group exist
-          const found = await this.groupsService.getGroup(group);
-          if (found) {
+          if (await this.groupsService.getGroup(group)) {
+            // Add user to added groups
             await this.groupsService.addUserToGroup(userCopy.id, group);
+            // Add group to groups list
+            userCopy.groups.push(group);
           }
         }
       }
-      // Remove user from removed groups
       for (const group of userCopy.groups) {
         // Check if group from old list not in new list
         if (groups.indexOf(group) === -1) {
-          await this.groupsService.deleteUserFromGroup(userCopy.id, group);
+          if (await this.groupsService.getGroup(group)) {
+            // Remove user from removed groups
+            await this.groupsService.deleteUserFromGroup(userCopy.id, group);
+            // Remove group from list
+            userCopy.groups = userCopy.groups.filter(item => item !== group);
+          }
         }
       }
-      userCopy.groups = groups;
     }
 
     // If replace list of friends in user
     if (friends) {
-
-      // Add user to friends from new list
       for (const friend of friends) {
         // Check if we have new friend not in old friends list
         if (userCopy.friends.indexOf(friend) === -1) {
           // Check if user exist
-          const found = await this.getUser(friend);
-          if (found) {
+          if (await this.getUser(friend)) {
+            // Add user to friends from new list
             await this.addUserToFriends(userCopy.id, friend);
+            userCopy.friends.push(friend);
           }
         }
       }
       // Remove user from removed friends
       for (const friend of userCopy.friends) {
         if (friends.indexOf(friend) === -1) {
-          await this.deleteUserFromFriends(userCopy.id, friend);
+          // Check if user exist
+          if (await this.getUser(friend)) {
+            // Add user to friends from new list
+            await this.deleteUserFromFriends(userCopy.id, friend);
+            userCopy.friends = userCopy.friends.filter(item => item !== friend);
+          }
         }
       }
-      userCopy.friends = friends;
     }
     await userCopy.save();
     return userCopy;
   }
 
   async deleteUser(id: string): Promise<void> {
-    const user = await this.getUser(id);
+    const user = await this.getUser(id, true);
     // Remove deleted user from all groups
     for (const group of user.groups) {
       await this.groupsService.deleteUserFromGroup(user.id, group);
@@ -141,33 +144,28 @@ export class UsersService {
     await this.userRepository.remove(user);
   }
 
-
   async addGroupToUser(userId: string, groupId: string): Promise<void> {
-    const userCopy = await this.copyUser(userId);
+    const userCopy = Object.assign(await this.getUser(userId));
     userCopy.groups.push(groupId);
     await userCopy.save();
   }
 
   async deleteGroupFromUser(userId: string, groupId: string): Promise<void> {
-    const userCopy = await this.copyUser(userId);
+    const userCopy = Object.assign(await this.getUser(userId));
     userCopy.groups = userCopy.groups.filter(group => group !== groupId);
     await userCopy.save();
   }
 
   async addUserToFriends(userId: string, recieverUserId: string): Promise<void> {
-    const userCopy = await this.copyUser(recieverUserId);
+    const userCopy = Object.assign(await this.getUser(recieverUserId));
     userCopy.friends.push(userId);
     await userCopy.save();
   }
 
   async deleteUserFromFriends(userId: string, recieverUserId: string): Promise<void> {
-    const userCopy = await this.copyUser(recieverUserId);
+    const userCopy = Object.assign(await this.getUser(recieverUserId));
     userCopy.friends = userCopy.friends.filter(friend => friend !== userId);
     await userCopy.save();
-  }
-
-  async copyUser(userId): Promise<User> {
-    return Object.assign(await this.getUser(userId));
   }
 
   async getManyUsers(usersIds: string[]): Promise<User[]> {
@@ -179,5 +177,4 @@ export class UsersService {
       },
     });
   }
-
 }

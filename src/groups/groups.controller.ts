@@ -16,7 +16,7 @@ export class GroupsController {
 
   @Get('/:id')
   getGroup(@Param('id') id: string): Promise<Group> {
-    return this.groupsService.getGroup(id);
+    return this.groupsService.getGroup(id, true);
   }
 
   @Post()

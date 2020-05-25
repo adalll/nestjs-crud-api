@@ -16,7 +16,7 @@ export class UsersController {
 
   @Get('/:id')
   getUser(@Param('id') id: string): Promise<User> {
-    return this.usersService.getUser(id);
+    return this.usersService.getUser(id, true);
   }
 
   @Post()
