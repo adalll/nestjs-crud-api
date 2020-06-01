@@ -12,6 +12,6 @@ export class UpdateGroupInput {
   @IsOptional()
   @IsUUID("4", {each: true})
   @Field(() => [ID], {defaultValue : null})
-  users: string[];
+  userIds: string[];
 
 }

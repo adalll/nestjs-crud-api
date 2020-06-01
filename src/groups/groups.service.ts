@@ -89,11 +89,6 @@ export class GroupsService {
     await this.groupRepository.remove(group);
   }
 
-  async addUserToGroup(userId: string, groupId: string): Promise<void> {
-    const groupCopy = Object.assign(await this.getGroup(groupId));
-    groupCopy.users.push(userId);
-    await groupCopy.save();
-  }
 
   async addUserToGroups(groupIds: string[], userId: string): Promise<void> {
     const groups = await this.getManyGroups(groupIds);

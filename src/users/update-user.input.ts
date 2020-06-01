@@ -17,10 +17,10 @@ export class UpdateUserInput {
   @IsOptional()
   @IsUUID("4", {each: true})
   @Field(() => [ID], {defaultValue : null})
-  groups: string[];
+  groupIds: string[];
 
   @IsOptional()
   @IsUUID("4", {each: true})
   @Field(() => [ID], {defaultValue : null})
-  friends: string[];
+  friendIds: string[];
 }
