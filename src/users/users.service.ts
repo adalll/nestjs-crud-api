@@ -1,20 +1,45 @@
 import { forwardRef, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { MongoRepository, Repository } from 'typeorm';
 import { v4 as uuid } from 'uuid';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './user.entity';
 import { GroupsService } from '../groups/groups.service';
+import { Group } from '../groups/group.entity';
 
 @Injectable()
 export class UsersService {
 
   constructor(
-    @InjectRepository(User) private userRepository: Repository<User>,
+    @InjectRepository(User) private userRepository: MongoRepository<User>,
+    @InjectRepository(Group) private groupRepository: MongoRepository<Group>,
     @Inject(forwardRef(() => GroupsService))
     private groupsService: GroupsService,
   ) {
+  }
+
+  async putUser(id: string) {
+    const user = await this.userRepository.findOne({ id });
+
+    this.groupRepository.updateMany({
+      where: {
+        id: {
+          $in: user.groups,
+        },
+      },
+    }, { $addToSet: { users: user.id } });
+
+
+    const groups = await this.groupRepository.find({
+      where: {
+        id: {
+          $in: user.groups,
+        },
+      },
+    });
+
+    return groups;
   }
 
   async getUsers(): Promise<User[]> {
@@ -38,28 +63,54 @@ export class UsersService {
     user.groups = [];
     user.friends = [];
     if (groups) {
-      const uniqGroups = groups.filter((item, idx, arr) => arr.indexOf(item) === idx);
-      for (const group of uniqGroups) {
-        //Check if group exist
-        if (await this.groupsService.getGroup(group)) {
-          // Add user to groups from list
-          await this.groupsService.addUserToGroup(user.id, group);
-          // Add group to user's groups
-          user.groups.push(group);
-        }
-      }
+
+      // const existGroups = (await this.groupRepository.find({
+      //   where: {
+      //     id: {
+      //       $in: groups,
+      //     }
+      //   }})).map(group => group.id);
+
+      const existGroups = await this.groupRepository.find( { }, { 'title': 1, 'id': 1 } );
+
+
+      await this.groupRepository.updateMany({
+        id: {
+          $in: groups,
+        },
+      }, { $addToSet: { users: user.id } });
+
+      // const uniqGroups = groups.filter((item, idx, arr) => arr.indexOf(item) === idx);
+      // for (const group of uniqGroups) {
+      //   //Check if group exist
+      //   if (await this.groupsService.getGroup(group)) {
+      //     // Add user to groups from list
+      //     await this.groupsService.addUserToGroup(user.id, group);
+      //     // Add group to user's groups
+      //     user.groups.push(group);
+      //   }
+      // }
+      user.groups = groups;
     }
     if (friends) {
-      const uniqFriends = friends.filter((item, idx, arr) => arr.indexOf(item) === idx);
-      for (const friend of uniqFriends) {
-        //Check if user exist
-        if (await this.getUser(friend)) {
-          // Add user to friends from list
-          await this.addUserToFriends(user.id, friend);
-          // Add friend to friends list
-          user.friends.push(friend);
-        }
-      }
+
+      await this.userRepository.updateMany({
+        id: {
+          $in: friends,
+        },
+      }, { $addToSet: { friends: user.id } });
+
+      // const uniqFriends = friends.filter((item, idx, arr) => arr.indexOf(item) === idx);
+      // for (const friend of uniqFriends) {
+      //   //Check if user exist
+      //   if (await this.getUser(friend)) {
+      //     // Add user to friends from list
+      //     await this.addUserToFriends(user.id, friend);
+      //     // Add friend to friends list
+      //     user.friends.push(friend);
+      //   }
+      // }
+      user.friends = friends;
     }
     await user.save();
     return user;
@@ -135,6 +186,7 @@ export class UsersService {
 
   async deleteUser(id: string): Promise<void> {
     const user = await this.getUser(id, true);
+
     // Remove deleted user from all groups
     for (const group of user.groups) {
       await this.groupsService.deleteUserFromGroup(user.id, group);

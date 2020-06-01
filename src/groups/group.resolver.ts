@@ -4,8 +4,6 @@ import { GroupType } from './group.type';
 import { CreateGroupInput } from './create-group.input';
 import { GroupsService } from '../groups/groups.service';
 import { UsersService } from '../users/users.service';
-import { UserType } from '../users/user.type';
-import { UpdateUserInput } from '../users/update-user.input';
 import { UpdateGroupInput } from './update-group.input';
 
 @Resolver(of => GroupType)
