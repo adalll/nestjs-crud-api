@@ -7,5 +7,5 @@ export class CreateGroupDto {
 
   @IsOptional()
   @IsUUID("4", {each: true})
-  users: string[];
+  userIds: string[];
 }

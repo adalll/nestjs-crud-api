@@ -11,6 +11,6 @@ export class CreateGroupInput {
   @IsOptional()
   @IsUUID("4", {each: true})
   @Field(() => [ID], {defaultValue : []})
-  users: string[];
+  userIds: string[];
 
 }

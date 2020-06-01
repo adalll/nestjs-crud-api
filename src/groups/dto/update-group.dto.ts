@@ -8,5 +8,5 @@ export class UpdateGroupDto {
 
   @IsOptional()
   @IsUUID("4", {each: true})
-  users: string[];
+  userIds: string[];
 }

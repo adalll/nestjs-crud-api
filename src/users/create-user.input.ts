@@ -15,10 +15,10 @@ export class CreateUserInput {
   @IsOptional()
   @IsUUID("4", {each: true})
   @Field(() => [ID], {defaultValue : []})
-  groups: string[];
+  groupIds: string[];
 
   @IsOptional()
   @IsUUID("4", {each: true})
   @Field(() => [ID], {defaultValue : []})
-  friends: string[];
+  friendIds: string[];
 }
