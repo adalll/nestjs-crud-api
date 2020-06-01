@@ -30,66 +30,54 @@ export class GroupsService {
   }
 
   async createGroup(createGroupDto: CreateGroupDto): Promise<Group> {
-    const { title, users } = createGroupDto;
+    const { title, userIds } = createGroupDto;
 
     const group = new Group();
     group.id = uuid();
     group.title = title;
     group.users = [];
 
-    if (users) {
-      // Filter duplicates
-      const uniqUsers = users.filter((item, idx, arr) => arr.indexOf(item) === idx);
-      // Add group to users from list
-      for (const user of uniqUsers) {
-        // Check if user exist
-        if (await this.usersService.getUser(user)) {
-          // Add group to users from list
-          await this.usersService.addGroupToUser(user, group.id);
-          // Add user to group's users
-          group.users.push(user);
-        }
-      }
+    if (!userIds || !userIds.length) {
+      await group.save();
+      return group;
     }
+
+    const uniqExistingUserIds = await this.usersService.getUniqExistingUserIds(userIds);
+    await this.usersService.addGroupToUsers(uniqExistingUserIds, group.id);
+    group.users = uniqExistingUserIds;
+
     await group.save();
     return group;
   };
 
-  async updateGroup(id: string, updateGroupDto: UpdateGroupDto): Promise<Group> {
 
-    const { title, users } = updateGroupDto;
+  async updateGroup(id: string, updateGroupDto: UpdateGroupDto): Promise<Group> {
+    const { title, userIds } = updateGroupDto;
 
     const groupCopy = Object.assign(await this.getGroup(id, true));
 
     if (title) {
       groupCopy.title = title;
     }
-    // If replace list of users in group
-    if (users) {
-      for (const user of users) {
-        // Check if we have new user not in old users list
-        if (groupCopy.users.indexOf(user) === -1) {
-          // Check if user exist
-          if (await this.usersService.getUser(user)) {
-            // Add group to user from new list
-            await this.usersService.addGroupToUser(user, groupCopy.id);
-            // Add user to group users
-            groupCopy.users.push(user);
-          }
-        }
-      }
-      for (const user of groupCopy.users) {
-        // Check if user from old list not in new list
-        if (users.indexOf(user) === -1) {
-          if (await this.usersService.getUser(user)) {
-            // Remove group from user who not in new list
-            await this.usersService.deleteGroupFromUser(user, groupCopy.id);
-            // Remove user from group users
-            groupCopy.users = groupCopy.users.filter(item => item !== user);
-          }
-        }
-      }
+
+    if (!userIds || !userIds.length) {
+      await groupCopy.save();
+      return groupCopy;
     }
+
+    // If replace list of users in group
+    const uniqExistingUserIds = await this.usersService.getUniqExistingUserIds(userIds);
+    // Get new users not in old users list
+    const userIdsToAdd = this.usersService.subtractIdArrays(uniqExistingUserIds, groupCopy.users);
+    // Add group to users from new list
+    await this.usersService.addGroupToUsers(userIdsToAdd, groupCopy.id);
+
+    // Get users from old list who not in new list
+    const userIdsToDelete = this.usersService.subtractIdArrays(groupCopy.users, uniqExistingUserIds);
+    // Remove group from users who not in new list
+    await this.usersService.deleteGroupFromUsers(userIdsToDelete, groupCopy.id);
+    groupCopy.users = uniqExistingUserIds;
+
     await groupCopy.save();
     return groupCopy;
   }
@@ -97,9 +85,7 @@ export class GroupsService {
   async deleteGroup(id: string): Promise<void> {
     const group = await this.getGroup(id, true);
     // Remove deleted group from all users
-    for (const user of group.users) {
-      await this.usersService.deleteGroupFromUser(user, group.id);
-    }
+    await this.usersService.deleteGroupFromUsers(group.users, group.id);
     await this.groupRepository.remove(group);
   }
 
@@ -109,10 +95,24 @@ export class GroupsService {
     await groupCopy.save();
   }
 
-  async deleteUserFromGroup(userId: string, groupId: string): Promise<void> {
-    const groupCopy = Object.assign(await this.getGroup(groupId));
-    groupCopy.users = groupCopy.users.filter(user => user !== userId);
-    await groupCopy.save();
+  async addUserToGroups(groupIds: string[], userId: string): Promise<void> {
+    const groups = await this.getManyGroups(groupIds);
+    const updatedGroups = groups.map(group => {
+      const groupCopy = Object.assign({}, group);
+      groupCopy.users.push(userId);
+      return groupCopy;
+    });
+    await this.groupRepository.save(updatedGroups);
+  }
+
+  async deleteUserFromGroups(groupIds: string[], userId: string): Promise<void> {
+    const groups = await this.getManyGroups(groupIds);
+    const updatedGroups = groups.map(group => {
+      const groupCopy = Object.assign({}, group);
+      groupCopy.users = groupCopy.users.filter(user => user !== userId);
+      return groupCopy;
+    });
+    await this.groupRepository.save(updatedGroups);
   }
 
   async getManyGroups(groupsIds: string[]): Promise<Group[]> {
@@ -124,4 +124,15 @@ export class GroupsService {
       },
     });
   }
+
+  async getUniqExistingGroupIds(ids: string[]): Promise<string[]> {
+    const uniqGroupIds = this.usersService.getUniqIds(ids);
+    const existingGroupIds = (await this.getManyGroups(ids)).map(group => group.id);
+    if (uniqGroupIds.length !== existingGroupIds.length) {
+      const groupIdsNotFounded = this.usersService.subtractIdArrays(uniqGroupIds, existingGroupIds);
+      throw new NotFoundException(`Invalid groupIds array, next groups not found: ${groupIdsNotFounded.toString()}`);
+    }
+    return existingGroupIds;
+  }
+
 }

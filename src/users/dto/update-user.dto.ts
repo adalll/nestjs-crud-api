@@ -12,9 +12,9 @@ export class UpdateUserDto {
 
   @IsOptional()
   @IsUUID("4", {each: true})
-  groups: string[];
+  groupIds: string[];
 
   @IsOptional()
   @IsUUID("4", {each: true})
-  friends: string[];
+  friendIds: string[];
 }
