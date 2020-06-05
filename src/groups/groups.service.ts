@@ -54,32 +54,32 @@ export class GroupsService {
   async updateGroup(id: string, updateGroupDto: UpdateGroupDto): Promise<Group> {
     const { title, userIds } = updateGroupDto;
 
-    const groupCopy = Object.assign(await this.getGroup(id, true));
+    const group = await this.getGroup(id, true);
 
     if (title) {
-      groupCopy.title = title;
+      group.title = title;
     }
 
     if (!userIds || !userIds.length) {
-      await groupCopy.save();
-      return groupCopy;
+      await group.save();
+      return group;
     }
 
     // If replace list of users in group
     const uniqExistingUserIds = await this.usersService.getUniqExistingUserIds(userIds);
     // Get new users not in old users list
-    const userIdsToAdd = this.usersService.subtractIdArrays(uniqExistingUserIds, groupCopy.users);
+    const userIdsToAdd = this.usersService.subtractIdArrays(uniqExistingUserIds, group.users);
     // Add group to users from new list
-    await this.usersService.addGroupToUsers(userIdsToAdd, groupCopy.id);
+    await this.usersService.addGroupToUsers(userIdsToAdd, group.id);
 
     // Get users from old list who not in new list
-    const userIdsToDelete = this.usersService.subtractIdArrays(groupCopy.users, uniqExistingUserIds);
+    const userIdsToDelete = this.usersService.subtractIdArrays(group.users, uniqExistingUserIds);
     // Remove group from users who not in new list
-    await this.usersService.deleteGroupFromUsers(userIdsToDelete, groupCopy.id);
-    groupCopy.users = uniqExistingUserIds;
+    await this.usersService.deleteGroupFromUsers(userIdsToDelete, group.id);
+    group.users = uniqExistingUserIds;
 
-    await groupCopy.save();
-    return groupCopy;
+    await group.save();
+    return group;
   }
 
   async deleteGroup(id: string): Promise<void> {
@@ -93,9 +93,8 @@ export class GroupsService {
   async addUserToGroups(groupIds: string[], userId: string): Promise<void> {
     const groups = await this.getManyGroups(groupIds);
     const updatedGroups = groups.map(group => {
-      const groupCopy = Object.assign({}, group);
-      groupCopy.users.push(userId);
-      return groupCopy;
+      group.users.push(userId);
+      return group;
     });
     await this.groupRepository.save(updatedGroups);
   }
@@ -103,9 +102,8 @@ export class GroupsService {
   async deleteUserFromGroups(groupIds: string[], userId: string): Promise<void> {
     const groups = await this.getManyGroups(groupIds);
     const updatedGroups = groups.map(group => {
-      const groupCopy = Object.assign({}, group);
-      groupCopy.users = groupCopy.users.filter(user => user !== userId);
-      return groupCopy;
+      group.users = group.users.filter(user => user !== userId);
+      return group;
     });
     await this.groupRepository.save(updatedGroups);
   }
@@ -124,8 +122,8 @@ export class GroupsService {
     const uniqGroupIds = this.usersService.getUniqIds(ids);
     const existingGroupIds = (await this.getManyGroups(ids)).map(group => group.id);
     if (uniqGroupIds.length !== existingGroupIds.length) {
-      const groupIdsNotFounded = this.usersService.subtractIdArrays(uniqGroupIds, existingGroupIds);
-      throw new NotFoundException(`Invalid groupIds array, next groups not found: ${groupIdsNotFounded.toString()}`);
+      const groupIdsNotFound = this.usersService.subtractIdArrays(uniqGroupIds, existingGroupIds);
+      throw new NotFoundException(`Invalid groupIds array, next groups not found: ${groupIdsNotFound.toString()}`);
     }
     return existingGroupIds;
   }

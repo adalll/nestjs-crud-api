@@ -61,13 +61,13 @@ export class UsersService {
   async updateUser(id: string, updateUserDto: UpdateUserDto): Promise<User> {
 
     const { firstName, lastName, groupIds, friendIds } = updateUserDto;
-    const userCopy = Object.assign(await this.getUser(id, true));
+    const user = await this.getUser(id, true);
 
     if (firstName) {
-      userCopy.firstName = firstName;
+      user.firstName = firstName;
     }
     if (lastName) {
-      userCopy.lastName = lastName;
+      user.lastName = lastName;
     }
     // If replace list of groups in user
     if (groupIds) {
@@ -75,17 +75,17 @@ export class UsersService {
       const uniqExistingGroupIds = await this.groupsService.getUniqExistingGroupIds(groupIds);
       // Get new groups not in old groups list
 
-      const groupIdsToAdd = this.subtractIdArrays(uniqExistingGroupIds, userCopy.groups);
+      const groupIdsToAdd = this.subtractIdArrays(uniqExistingGroupIds, user.groups);
       // Add user to groups from new list
-      await this.groupsService.addUserToGroups(groupIdsToAdd, userCopy.id);
+      await this.groupsService.addUserToGroups(groupIdsToAdd, user.id);
 
       // Get old groups not in new groups list
-      const groupIdsToDelete = this.subtractIdArrays(userCopy.groups, uniqExistingGroupIds);
+      const groupIdsToDelete = this.subtractIdArrays(user.groups, uniqExistingGroupIds);
       // Remove user from removed groups
-      await this.groupsService.deleteUserFromGroups(groupIdsToDelete, userCopy.id);
+      await this.groupsService.deleteUserFromGroups(groupIdsToDelete, user.id);
 
       // Replace user's groups list
-      userCopy.groups = uniqExistingGroupIds;
+      user.groups = uniqExistingGroupIds;
 
     }
 
@@ -94,34 +94,33 @@ export class UsersService {
 
       const uniqExistingFriendIds = await this.getUniqExistingUserIds(friendIds);
       // Add user to friends from new list
-      const friendIdsToAdd = this.subtractIdArrays(uniqExistingFriendIds, userCopy.friends);
-      await this.addUserToFriends(friendIdsToAdd, userCopy.id);
+      const friendIdsToAdd = this.subtractIdArrays(uniqExistingFriendIds, user.friends);
+      await this.addUserToFriends(friendIdsToAdd, user.id);
       // Remove user from friends who not in new list
-      const friendIdsToDelete = this.subtractIdArrays(userCopy.friends, uniqExistingFriendIds);
-      await this.deleteUserFromFriends(friendIdsToDelete, userCopy.id);
+      const friendIdsToDelete = this.subtractIdArrays(user.friends, uniqExistingFriendIds);
+      await this.deleteUserFromFriends(friendIdsToDelete, user.id);
       // Replace friends list
-      userCopy.friends = uniqExistingFriendIds;
+      user.friends = uniqExistingFriendIds;
 
     }
-    await userCopy.save();
-    return userCopy;
+    await user.save();
+    return user;
   }
 
   async deleteUser(id: string): Promise<void> {
     const user = await this.getUser(id, true);
     // Remove deleted user from all groups
-    this.groupsService.deleteUserFromGroups(user.groups, user.id);
+    await this.groupsService.deleteUserFromGroups(user.groups, user.id);
     // Remove deleted user from all friends
-    this.deleteUserFromFriends(user.friends, user.id);
+    await this.deleteUserFromFriends(user.friends, user.id);
     await this.userRepository.remove(user);
   }
 
   async addGroupToUsers(userIds: string[], groupId: string): Promise<void> {
     const users = await this.getManyUsers(userIds);
     const updatedUsers = users.map(user => {
-      const userCopy = Object.assign({}, user);
-      userCopy.groups.push(groupId);
-      return userCopy;
+      user.groups.push(groupId);
+      return user;
     });
     await this.userRepository.save(updatedUsers);
   }
@@ -129,9 +128,8 @@ export class UsersService {
   async deleteGroupFromUsers(userIds: string[], groupId: string): Promise<void> {
     const users = await this.getManyUsers(userIds);
     const updatedUsers = users.map(user => {
-      const userCopy = Object.assign({}, user);
-      userCopy.groups = userCopy.groups.filter(group => group !== groupId);
-      return userCopy;
+      user.groups = user.groups.filter(group => group !== groupId);
+      return user;
     });
     await this.userRepository.save(updatedUsers);
   }
@@ -139,9 +137,8 @@ export class UsersService {
   async addUserToFriends(friendIds: string[], userId: string): Promise<void> {
     const friends = await this.getManyUsers(friendIds);
     const updatedFriends = friends.map(friend => {
-      const friendCopy = Object.assign({}, friend);
-      friendCopy.friends.push(userId);
-      return friendCopy;
+      friend.friends.push(userId);
+      return friend;
     });
     await this.userRepository.save(updatedFriends);
   }
@@ -149,9 +146,8 @@ export class UsersService {
   async deleteUserFromFriends(friendIds: string[], userId: string): Promise<void> {
     const friends = await this.getManyUsers(friendIds);
     const updatedFriends = friends.map(friend => {
-      const friendCopy = Object.assign({}, friend);
-      friendCopy.friends = friendCopy.friends.filter(friend => friend !== userId);
-      return friendCopy;
+      friend.friends = friend.friends.filter(friend => friend !== userId);
+      return friend;
     });
     await this.userRepository.save(updatedFriends);
   }
